@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: './',
+  base: '/Camp-Layout-Tool/',
   plugins: [react()],
   test: {
     environment: 'jsdom',
