@@ -140,6 +140,13 @@ label {
   border-color: transparent;
 }
 
+.primary-button:hover {
+  background: linear-gradient(135deg, var(--ui-primary-start), var(--ui-primary-end));
+  color: var(--ui-primary-text);
+  border-color: transparent;
+  filter: brightness(1.05);
+}
+
 .ghost-button {
   background: transparent;
 }
@@ -229,6 +236,10 @@ label {
 
 .welcome-hero-actions button {
   width: 100%;
+}
+
+.welcome-action-button-active {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24) inset;
 }
 
 .welcome-card,
@@ -533,7 +544,7 @@ label {
   margin: auto 0 0;
   padding: 0.6rem 0 0.4rem;
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: var(--ui-muted);
 }
 

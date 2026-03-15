@@ -93,10 +93,10 @@ const LegendSwatch = ({
 }) => {
   const swatchWidth = compact ? 22 : 28;
   const swatchHeight = compact ? 14 : 18;
-  const swatchX = compact ? 14 : 18;
-  const swatchY = compact ? 9 : 11;
+  const swatchX = compact ? 15 : 18;
+  const swatchY = compact ? 8 : 11;
   const iconBox = compact ? 10 : 14;
-  const iconOffsetX = compact ? 9 : 11;
+  const iconOffsetX = compact ? 10 : 11;
   const iconOffsetY = compact ? 4 : 4;
 
   if (entry.shape === 'ellipse' || entry.shape === 'tent-dome') {
@@ -537,14 +537,18 @@ export const LayoutStage = ({
                   <Group
                     key={entry.id}
                     x={16}
-                    y={scene.kind === 'site' ? 48 + index * legendRowHeight : 34 + index * legendRowHeight}
+                    y={scene.kind === 'site' ? 48 + index * legendRowHeight : 30 + index * legendRowHeight}
                     listening={false}
                   >
-                    <LegendSwatch entry={entry} compact={scene.kind === 'interior'} />
+                    <Group y={scene.kind === 'site' ? 0 : 1}>
+                      <LegendSwatch entry={entry} compact={scene.kind === 'interior'} />
+                    </Group>
                     <Text
-                      x={scene.kind === 'site' ? 46 : 38}
-                      y={scene.kind === 'site' ? -1 : -2}
+                      x={scene.kind === 'site' ? 46 : 34}
+                      y={scene.kind === 'site' ? -1 : 0}
                       width={frame.legendWidth - (scene.kind === 'site' ? 66 : 54)}
+                      height={legendRowHeight}
+                      verticalAlign="middle"
                       text={entry.quantity > 1 ? `${entry.label} x${entry.quantity}` : entry.label}
                       fontSize={scene.kind === 'site' ? 14 : 10}
                       fontStyle="bold"

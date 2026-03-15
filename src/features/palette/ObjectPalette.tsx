@@ -33,7 +33,10 @@ export const ObjectPalette = ({
   return (
     <aside className={`sidebar palette palette-${sceneKind}`}>
       <div className="panel-title-row">
-        <div />
+        <div className="panel-header">
+          <h3>{sceneKind === 'site' ? 'Exterior Inventory' : 'Interior Inventory'}</h3>
+          <p className="panel-copy">Drag items from here onto the layout.</p>
+        </div>
         <button
           type="button"
           className="panel-collapse"

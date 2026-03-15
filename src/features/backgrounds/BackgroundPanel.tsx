@@ -28,7 +28,9 @@ export const BackgroundPanel = ({
   return (
     <section className="panel-card">
       <div className="panel-title-row">
-        <div />
+        <div className="panel-header">
+          <h3>Background</h3>
+        </div>
         <button
           type="button"
           className="panel-collapse"

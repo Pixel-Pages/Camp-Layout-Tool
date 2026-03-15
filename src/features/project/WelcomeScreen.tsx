@@ -41,17 +41,21 @@ export const WelcomeScreen = ({
         </div>
 
         <div className="welcome-hero-actions">
-          <button className="primary-button" onClick={onOpenProject}>
+          <button className="primary-button welcome-action-button" onClick={onOpenProject}>
             Open Existing Project
           </button>
           <button
-            className={activePanel === 'camp' ? 'primary-button' : ''}
+            className={`primary-button welcome-action-button${
+              activePanel === 'camp' ? ' welcome-action-button-active' : ''
+            }`}
             onClick={() => setActivePanel((current) => (current === 'camp' ? null : 'camp'))}
           >
             Create Camp Layout
           </button>
           <button
-            className={activePanel === 'interior' ? 'primary-button' : ''}
+            className={`primary-button welcome-action-button${
+              activePanel === 'interior' ? ' welcome-action-button-active' : ''
+            }`}
             onClick={() => setActivePanel((current) => (current === 'interior' ? null : 'interior'))}
           >
             Create Interior-Only Layout
