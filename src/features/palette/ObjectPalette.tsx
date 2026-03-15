@@ -33,10 +33,7 @@ export const ObjectPalette = ({
   return (
     <aside className={`sidebar palette palette-${sceneKind}`}>
       <div className="panel-title-row">
-        <div className="panel-header">
-          <h3>{sceneKind === 'site' ? 'Exterior inventory' : 'Interior inventory'}</h3>
-          <p className="panel-copy">Drag items from here onto the layout.</p>
-        </div>
+        <div />
         <button
           type="button"
           className="panel-collapse"
@@ -50,11 +47,6 @@ export const ObjectPalette = ({
       {collapsed ? null : (
         <>
           <div className="palette-list">
-            <button type="button" className="palette-card palette-card-custom" onClick={onCreateCustomItem}>
-              <strong>Custom item</strong>
-              <span>Define your own item shape, colors, size, and interior support.</span>
-            </button>
-
             {definitions.map((definition) => (
               <button
                 key={definition.id}
@@ -75,6 +67,11 @@ export const ObjectPalette = ({
                 </span>
               </button>
             ))}
+
+            <button type="button" className="palette-card palette-card-custom" onClick={onCreateCustomItem}>
+              <strong>Custom item</strong>
+              <span>Define your own item shape, colors, size, and interior support.</span>
+            </button>
           </div>
 
           {selected?.resizable ? (

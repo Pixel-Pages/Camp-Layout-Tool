@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { CampProjectForm } from './CampProjectForm';
 import { InteriorProjectForm } from './InteriorProjectForm';
 
 interface WelcomeScreenProps {
-  onCreateSite: (name: string) => void;
+  onCreateSite: (name: string, width: number, height: number) => void;
   onCreateInterior: (name: string, length: number, width: number) => void;
   onOpenProject: () => void;
 }
@@ -12,13 +13,12 @@ export const WelcomeScreen = ({
   onCreateInterior,
   onOpenProject,
 }: WelcomeScreenProps) => {
-  const [siteName, setSiteName] = useState('New Camp Layout');
+  const [activePanel, setActivePanel] = useState<'camp' | 'interior' | null>(null);
 
   return (
     <div className="welcome-shell">
       <section className="welcome-hero">
         <div className="welcome-hero-copy">
-          <span className="welcome-kicker">Local-first deployment planning</span>
           <h1>Camp Layout Design Tool</h1>
           <p className="hero-copy">
             This is a web app that stores all projects locally on your own computer. Once the page is loaded you
@@ -44,41 +44,47 @@ export const WelcomeScreen = ({
           <button className="primary-button" onClick={onOpenProject}>
             Open Existing Project
           </button>
-          <p className="panel-copy">Open a saved `.layoutplanner.json` file from your own computer.</p>
+          <button
+            className={activePanel === 'camp' ? 'primary-button' : ''}
+            onClick={() => setActivePanel((current) => (current === 'camp' ? null : 'camp'))}
+          >
+            Create Camp Layout
+          </button>
+          <button
+            className={activePanel === 'interior' ? 'primary-button' : ''}
+            onClick={() => setActivePanel((current) => (current === 'interior' ? null : 'interior'))}
+          >
+            Create Interior-Only Layout
+          </button>
         </div>
       </section>
 
-      <div className="welcome-grid">
-        <section className="welcome-card welcome-card-emphasis">
+      {activePanel ? (
+        <section className={`welcome-card ${activePanel === 'camp' ? 'welcome-card-emphasis' : ''}`}>
           <div className="panel-header">
-            <h2>Start a new camp layout</h2>
+            <h2>{activePanel === 'camp' ? 'Create a camp layout' : 'Create an interior-only layout'}</h2>
             <p className="panel-copy">
-              Build a camp-scale plan for tents, hardened structures, generators, obstacles, cabling, and visibility
-              layers.
+              {activePanel === 'camp'
+                ? 'Set the file name and overall camp size before you start placing tents, structures, utilities, and obstacles.'
+                : 'Start from a tent footprint or use a custom room size when you only need the interior planning space.'}
             </p>
           </div>
 
-          <label>
-            Layout title
-            <input value={siteName} onChange={(event) => setSiteName(event.target.value)} />
-          </label>
-
-          <button className="primary-button" onClick={() => onCreateSite(siteName)}>
-            Create Camp Layout
-          </button>
+          {activePanel === 'camp' ? (
+            <CampProjectForm
+              submitLabel="Create Camp Layout"
+              onSubmit={onCreateSite}
+              onCancel={() => setActivePanel(null)}
+            />
+          ) : (
+            <InteriorProjectForm
+              submitLabel="Create Interior-Only Layout"
+              onSubmit={onCreateInterior}
+              onCancel={() => setActivePanel(null)}
+            />
+          )}
         </section>
-
-        <section className="welcome-card">
-          <div className="panel-header">
-            <h2>Start an interior-only layout</h2>
-            <p className="panel-copy">
-              Begin from a tent footprint or define a custom room size when you only need the interior planning space.
-            </p>
-          </div>
-
-          <InteriorProjectForm submitLabel="Create Interior Only Layout" onSubmit={onCreateInterior} />
-        </section>
-      </div>
+      ) : null}
 
       <p className="welcome-footer">created by Aaron Fullbright</p>
     </div>

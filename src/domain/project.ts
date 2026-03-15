@@ -55,6 +55,7 @@ export const createScene = (kind: SceneKind, name: string, size: Size): LayoutSc
   kind,
   name,
   size,
+  appearance: {},
   items: [],
 });
 
@@ -80,8 +81,10 @@ export const createProject = (
   };
 };
 
-export const createSiteProject = (name = 'New Camp Layout'): LayoutProject =>
-  createProject(name, 'site', createScene('site', 'Camp Layout', DEFAULT_SITE_SIZE));
+export const createSiteProject = (
+  name = 'New Camp Layout',
+  size: Size = DEFAULT_SITE_SIZE,
+): LayoutProject => createProject(name, 'site', createScene('site', 'Camp Layout', size));
 
 export const createInteriorProject = (
   name = 'New Interior Layout',

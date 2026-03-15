@@ -27,10 +27,12 @@ import { InspectorPanel } from '../features/inspector/InspectorPanel';
 import { ReportPanel } from '../features/reports/ReportPanel';
 import { BackgroundPanel } from '../features/backgrounds/BackgroundPanel';
 import { useElementSize } from '../shared/useElementSize';
+import { DEFAULT_SITE_SIZE } from '../domain/project';
 import { BASE_PIXELS_PER_INCH, clampZoom, screenToScene } from '../editor/viewport';
 import { getLayoutFrameMetrics } from '../editor/layoutFrame';
 import { buildLegendEntries } from '../editor/legend';
-import type { BackgroundImageItem, ViewportState } from '../domain/types';
+import { getSceneThemeColors } from '../editor/sceneTheme';
+import type { ViewportState } from '../domain/types';
 
 const defaultFileName = (projectName: string) =>
   `${projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'layout-project'}.layoutplanner.json`;
@@ -42,6 +44,7 @@ type InlineEditorState =
   | { kind: 'project-title'; value: string }
   | { kind: 'container-title'; value: string }
   | { kind: 'text-item'; itemId: string; value: string };
+type ContextMenuState = { itemId: string; x: number; y: number };
 
 type CustomItemDraft = Omit<Parameters<typeof createCustomCatalogDefinition>[0], 'scope'>;
 
@@ -54,19 +57,21 @@ const createSceneFitViewport = (
 ): ViewportState => {
   const safeWidth = Math.max(hostWidth, 320);
   const safeHeight = Math.max(hostHeight, 320);
-  const padding = 40;
+  const horizontalPadding = 28;
+  const verticalPadding = 24;
   const zoom = clampZoom(
     Math.min(
-      (safeWidth - padding) / (sceneMetrics.sheetSize.width * BASE_PIXELS_PER_INCH),
-      (safeHeight - padding) / (sceneMetrics.sheetSize.height * BASE_PIXELS_PER_INCH),
+      (safeWidth - horizontalPadding) / (sceneMetrics.sheetSize.width * BASE_PIXELS_PER_INCH),
+      (safeHeight - verticalPadding) / (sceneMetrics.sheetSize.height * BASE_PIXELS_PER_INCH),
     ),
   );
+  const sheetPixelWidth = sceneMetrics.sheetSize.width * BASE_PIXELS_PER_INCH * zoom;
 
   return {
     zoom,
     offset: {
-      x: (safeWidth - sceneMetrics.sheetSize.width * BASE_PIXELS_PER_INCH * zoom) / 2,
-      y: (safeHeight - sceneMetrics.sheetSize.height * BASE_PIXELS_PER_INCH * zoom) / 2,
+      x: (safeWidth - sheetPixelWidth) / 2,
+      y: 18,
     },
   };
 };
@@ -126,8 +131,13 @@ export const App = () => {
   const [isInteriorDialogOpen, setIsInteriorDialogOpen] = useState(false);
   const [isCustomItemDialogOpen, setIsCustomItemDialogOpen] = useState(false);
   const [inlineEditor, setInlineEditor] = useState<InlineEditorState | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const autoFitSceneIdsRef = useRef<Set<string>>(new Set());
+  const activeSceneColors = useMemo(
+    () => (activeScene ? getSceneThemeColors(activeScene.kind, activeScene.appearance, theme) : null),
+    [activeScene, theme],
+  );
 
   const sceneCategories = useMemo(() => {
     if (!project || !activeScene) {
@@ -175,11 +185,37 @@ export const App = () => {
   useEffect(() => {
     autoFitSceneIdsRef.current.clear();
     setInlineEditor(null);
+    setContextMenu(null);
   }, [project?.id]);
 
   useEffect(() => {
     setInlineEditor(null);
+    setContextMenu(null);
   }, [activeScene?.id]);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      return;
+    }
+
+    const closeContextMenu = () => setContextMenu(null);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setContextMenu(null);
+      }
+    };
+
+    window.addEventListener('pointerdown', closeContextMenu);
+    window.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', closeContextMenu, true);
+    window.addEventListener('resize', closeContextMenu);
+    return () => {
+      window.removeEventListener('pointerdown', closeContextMenu);
+      window.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', closeContextMenu, true);
+      window.removeEventListener('resize', closeContextMenu);
+    };
+  }, [contextMenu]);
 
   useEffect(() => {
     if (!activeScene || activeScene.kind !== 'interior' || !activeFrame) {
@@ -266,6 +302,7 @@ export const App = () => {
 
       if (event.key === 'Escape') {
         event.preventDefault();
+        setContextMenu(null);
         store.cancelDraftTool();
         store.setTool('select');
         return;
@@ -288,11 +325,16 @@ export const App = () => {
     return window.confirm('You have unsaved changes. Continue and discard the current session state?');
   };
 
-  const handleCreateSite = (name: string) => {
+  const handleCreateSite = (
+    name: string,
+    width = DEFAULT_SITE_SIZE.width,
+    height = DEFAULT_SITE_SIZE.height,
+  ) => {
     if (!confirmDiscardIfNeeded()) {
       return;
     }
-    editor.createProject('site', name || 'New Camp Layout');
+    editor.createProject('site', name || 'New Camp Layout', { width, height });
+    setContextMenu(null);
     setNotice(null);
   };
 
@@ -302,6 +344,7 @@ export const App = () => {
     }
     editor.createProject('interior', name || 'New Interior Layout', { width: length, height: width });
     setIsInteriorDialogOpen(false);
+    setContextMenu(null);
     setNotice(null);
   };
 
@@ -370,6 +413,7 @@ export const App = () => {
   };
 
   const handleOpenProject = async (file?: File | null) => {
+    setContextMenu(null);
     if (!file) {
       if (project && !confirmDiscardIfNeeded()) {
         return;
@@ -391,6 +435,7 @@ export const App = () => {
     if (!project) {
       return;
     }
+    setContextMenu(null);
 
     try {
       const result = await saveProjectDocument(
@@ -409,6 +454,7 @@ export const App = () => {
     if (!project || !activeScene || !stageRef.current) {
       return;
     }
+    setContextMenu(null);
 
     const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
     await downloadDataUrl(
@@ -423,6 +469,7 @@ export const App = () => {
     if (!project) {
       return;
     }
+    setContextMenu(null);
 
     downloadTextFile(
       exportPackingListSectionsCsv(packingSections),
@@ -432,6 +479,7 @@ export const App = () => {
   };
 
   const handleBackgroundUpload = async (file?: File | null) => {
+    setContextMenu(null);
     if (!file) {
       backgroundInputRef.current?.click();
       return;
@@ -538,20 +586,18 @@ export const App = () => {
     setInlineEditor(null);
   };
 
-  const handleUpdateBackground = (changes: Partial<BackgroundImageItem>) => {
-    if (!activeScene || !activeBackgroundItem) {
+  const handleUpdateSceneAppearance = (
+    changes: Partial<NonNullable<typeof activeScene>['appearance']>,
+  ) => {
+    if (!activeScene) {
       return;
     }
 
-    editor.applySceneCommand({
-      type: 'update-item',
-      sceneId: activeScene.id,
-      itemId: activeBackgroundItem.id,
-      changes,
-    });
+    editor.setSceneAppearance(activeScene.id, changes);
   };
 
   const handleCanvasClick = (point: { x: number; y: number }) => {
+    setContextMenu(null);
     if (editor.tool === 'text') {
       const itemId = editor.addTextAt(point);
       if (itemId) {
@@ -561,6 +607,20 @@ export const App = () => {
     }
 
     editor.handleCanvasClick(point);
+  };
+
+  const handleDuplicateFromContextMenu = () => {
+    if (!activeScene || !contextMenu) {
+      return;
+    }
+
+    editor.applySceneCommand({
+      type: 'duplicate-item',
+      sceneId: activeScene.id,
+      itemId: contextMenu.itemId,
+      offset: { x: 24, y: 24 },
+    });
+    setContextMenu(null);
   };
 
   const activeInlineTextItem =
@@ -580,8 +640,8 @@ export const App = () => {
         left: activeSceneViewport.offset.x + scale * activeFrame.sceneOrigin.x,
         top: activeSceneViewport.offset.y + scale * (activeFrame.scenePadding - (activeScene.kind === 'site' ? 10 : 8)),
         width: scale * activeScene.size.width,
-        minHeight: scale * (activeScene.kind === 'site' ? 54 : 28),
-        fontSize: scale * (activeScene.kind === 'site' ? 42 : 18),
+        minHeight: scale * (activeScene.kind === 'site' ? 54 : 18),
+        fontSize: scale * (activeScene.kind === 'site' ? 42 : 12),
         textAlign: 'center' as const,
         multiline: false,
       };
@@ -726,6 +786,7 @@ export const App = () => {
               project={project}
               scene={activeScene}
               documentTitle={documentTitle}
+              theme={theme}
               tool={editor.tool}
               viewport={activeSceneViewport}
               selectedItemId={editor.selectedItemId}
@@ -740,6 +801,7 @@ export const App = () => {
               onCanvasMove={editor.handleCanvasMove}
               onEditTitle={handleEditActiveTitle}
               onSelectItem={(itemId) => {
+                setContextMenu(null);
                 editor.setSelectedItemId(itemId);
                 if (editor.tool !== 'text') {
                   editor.setTool('select');
@@ -758,6 +820,7 @@ export const App = () => {
               onUpdateCablePoint={editor.updateCablePoint}
               onUpdateArrowEndpoint={editor.updateArrowEndpoint}
               onFinishDraftTool={editor.finishDraftTool}
+              onOpenContextMenu={(itemId, point) => setContextMenu({ itemId, x: point.x, y: point.y })}
             />
 
             {inlineEditor && inlineEditorLayout ? (
@@ -849,11 +912,15 @@ export const App = () => {
 
           <BackgroundPanel
             item={activeBackgroundItem}
+            appearance={activeScene.appearance}
+            effectiveBackgroundColor={activeSceneColors?.backgroundColor ?? '#152017'}
+            effectiveFrameColor={activeSceneColors?.frameColor ?? '#0b0b0c'}
+            effectiveAccentColor={activeSceneColors?.accentColor ?? '#ff8a1d'}
             onUpload={() => handleBackgroundUpload()}
             onSelectBackground={
               activeBackgroundItem ? () => editor.setSelectedItemId(activeBackgroundItem.id) : undefined
             }
-            onUpdateBackground={handleUpdateBackground}
+            onUpdateAppearance={handleUpdateSceneAppearance}
           />
 
           <InspectorPanel
@@ -926,6 +993,21 @@ export const App = () => {
               onCancel={() => setIsCustomItemDialogOpen(false)}
             />
           </div>
+        </div>
+      ) : null}
+
+      {contextMenu ? (
+        <div
+          className="context-menu"
+          style={{
+            left: `${Math.max(16, contextMenu.x)}px`,
+            top: `${Math.max(16, contextMenu.y)}px`,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <button type="button" onClick={handleDuplicateFromContextMenu}>
+            Duplicate
+          </button>
         </div>
       ) : null}
     </div>

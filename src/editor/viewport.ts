@@ -2,7 +2,7 @@ import type { Point, ViewportState } from '../domain/types';
 
 export const BASE_PIXELS_PER_INCH = 0.55;
 export const MIN_ZOOM = 0.2;
-export const MAX_ZOOM = 4;
+export const MAX_ZOOM = 12;
 
 export const createDefaultViewport = (): ViewportState => ({
   zoom: 1,

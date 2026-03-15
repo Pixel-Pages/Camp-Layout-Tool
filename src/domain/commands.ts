@@ -169,6 +169,20 @@ export const applyProjectCommand = (project: LayoutProject, command: ProjectComm
       );
       return updateProjectTimestamp(nextProject);
     }
+    case 'update-scene-appearance': {
+      nextProject.scenes = nextProject.scenes.map((scene) =>
+        scene.id === command.sceneId
+          ? {
+              ...scene,
+              appearance: {
+                ...scene.appearance,
+                ...command.appearance,
+              },
+            }
+          : scene,
+      );
+      return updateProjectTimestamp(nextProject);
+    }
     case 'rename-project': {
       nextProject.name = command.name;
       return updateProjectTimestamp(nextProject);

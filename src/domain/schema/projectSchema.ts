@@ -27,6 +27,12 @@ const styleSchema = z.object({
   opacity: z.number().optional(),
 });
 
+const sceneAppearanceSchema = z.object({
+  backgroundColor: z.string().optional(),
+  frameColor: z.string().optional(),
+  accentColor: z.string().optional(),
+});
+
 const catalogDefinitionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -128,6 +134,7 @@ const sceneSchema = z.object({
   kind: z.union([z.literal('site'), z.literal('interior')]),
   name: z.string(),
   size: sizeSchema,
+  appearance: sceneAppearanceSchema.default({}),
   items: z.array(sceneItemSchema),
 });
 

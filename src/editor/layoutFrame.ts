@@ -12,9 +12,9 @@ export interface LayoutFrameMetrics {
 
 const SHEET_PADDING = 72;
 const TITLE_HEIGHT = 70;
-const INTERIOR_TITLE_HEIGHT = 40;
+const INTERIOR_TITLE_HEIGHT = 28;
 const LEGEND_WIDTH = 320;
-const INTERIOR_LEGEND_WIDTH = 170;
+const INTERIOR_LEGEND_WIDTH = 145;
 const SECTION_GAP = 56;
 
 export const getLayoutFrameMetrics = (
@@ -26,9 +26,9 @@ export const getLayoutFrameMetrics = (
     showTitleAndKey ? (scene.kind === 'site' ? TITLE_HEIGHT : INTERIOR_TITLE_HEIGHT) : 0;
   const legendWidth =
     showTitleAndKey ? (scene.kind === 'site' ? LEGEND_WIDTH : INTERIOR_LEGEND_WIDTH) : 0;
-  const legendRowHeight = scene.kind === 'site' ? 28 : 20;
+  const legendRowHeight = scene.kind === 'site' ? 28 : 16;
   const legendHeight = showTitleAndKey
-    ? Math.max(scene.kind === 'site' ? 220 : 118, legendRowCount * legendRowHeight + (scene.kind === 'site' ? 70 : 46))
+    ? Math.max(scene.kind === 'site' ? 220 : 88, legendRowCount * legendRowHeight + (scene.kind === 'site' ? 70 : 34))
     : 0;
   const sceneOrigin = {
     x: SHEET_PADDING,

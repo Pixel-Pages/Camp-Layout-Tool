@@ -47,6 +47,12 @@ export interface VisibilityState {
   hiddenCategories: string[];
 }
 
+export interface SceneAppearance {
+  backgroundColor?: string;
+  frameColor?: string;
+  accentColor?: string;
+}
+
 export interface ItemMetadata {
   notes?: string;
   tags?: string[];
@@ -141,6 +147,7 @@ export interface LayoutScene {
   kind: SceneKind;
   name: string;
   size: Size;
+  appearance: SceneAppearance;
   items: SceneItem[];
 }
 
@@ -187,6 +194,7 @@ export type ProjectCommand =
   | { type: 'rotate-entity'; sceneId: string; itemId: string; rotation: number }
   | { type: 'resize-entity'; sceneId: string; itemId: string; size: Size }
   | { type: 'update-scene-size'; sceneId: string; size: Size }
+  | { type: 'update-scene-appearance'; sceneId: string; appearance: Partial<SceneAppearance> }
   | { type: 'rename-project'; name: string }
   | { type: 'add-custom-definition'; definition: CatalogDefinition }
   | { type: 'remove-item'; sceneId: string; itemId: string }

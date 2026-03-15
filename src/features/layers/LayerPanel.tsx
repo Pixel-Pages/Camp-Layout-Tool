@@ -34,9 +34,7 @@ export const LayerPanel = ({
   return (
     <section className="panel-card">
       <div className="panel-title-row">
-        <div className="panel-header">
-          <h3>Layers</h3>
-        </div>
+        <div />
         <button
           type="button"
           className="panel-collapse"

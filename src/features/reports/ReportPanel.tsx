@@ -47,9 +47,7 @@ export const ReportPanel = ({ sections, totalWeight, onExportCsv }: ReportPanelP
   return (
     <section className="panel-card">
       <div className="panel-title-row">
-        <div className="panel-header">
-          <h3>Packing list</h3>
-        </div>
+        <div />
         <button
           type="button"
           className="panel-collapse"

@@ -14,6 +14,7 @@ import type {
 } from '../../domain/types';
 import { buildLegendEntries } from '../legend';
 import { getLayoutFrameMetrics } from '../layoutFrame';
+import { getSceneThemeColors } from '../sceneTheme';
 import { BASE_PIXELS_PER_INCH, screenToScene, zoomViewportAtPoint } from '../viewport';
 import { SceneRenderer } from '../renderers/SceneRenderer';
 
@@ -41,6 +42,8 @@ interface LayoutStageProps {
   onUpdateArrowEndpoint: (itemId: string, endpoint: 'start' | 'end', nextPoint: Point) => void;
   onFinishDraftTool: () => void;
   onEditTitle: () => void;
+  onOpenContextMenu?: (itemId: string, point: Point) => void;
+  theme: 'light' | 'dark';
 }
 
 const buildGridLines = (scene: LayoutScene, gridSize: number) => {
@@ -81,14 +84,28 @@ const getTentOutlinePoints = (width: number, height: number): number[] => {
   ];
 };
 
-const LegendSwatch = ({ entry }: { entry: ReturnType<typeof buildLegendEntries>[number] }) => {
+const LegendSwatch = ({
+  entry,
+  compact,
+}: {
+  entry: ReturnType<typeof buildLegendEntries>[number];
+  compact: boolean;
+}) => {
+  const swatchWidth = compact ? 22 : 28;
+  const swatchHeight = compact ? 14 : 18;
+  const swatchX = compact ? 14 : 18;
+  const swatchY = compact ? 9 : 11;
+  const iconBox = compact ? 10 : 14;
+  const iconOffsetX = compact ? 9 : 11;
+  const iconOffsetY = compact ? 4 : 4;
+
   if (entry.shape === 'ellipse' || entry.shape === 'tent-dome') {
     return (
       <Ellipse
-        x={18}
-        y={11}
-        radiusX={12}
-        radiusY={8}
+        x={swatchX}
+        y={swatchY}
+        radiusX={compact ? 9 : 12}
+        radiusY={compact ? 6 : 8}
         fill={entry.fill}
         stroke={entry.stroke}
         strokeWidth={1.5}
@@ -99,9 +116,9 @@ const LegendSwatch = ({ entry }: { entry: ReturnType<typeof buildLegendEntries>[
   if (entry.shape === 'tent-rect') {
     return (
       <Line
-        x={18}
-        y={11}
-        points={getTentOutlinePoints(28, 16)}
+        x={swatchX}
+        y={swatchY}
+        points={getTentOutlinePoints(compact ? 22 : 28, compact ? 12 : 16)}
         closed
         fill={entry.fill}
         stroke={entry.stroke}
@@ -116,19 +133,19 @@ const LegendSwatch = ({ entry }: { entry: ReturnType<typeof buildLegendEntries>[
       <Rect
         x={4}
         y={2}
-        width={28}
-        height={18}
+        width={swatchWidth}
+        height={swatchHeight}
         fill={entry.fill}
         stroke={entry.stroke}
         strokeWidth={1.5}
-        cornerRadius={entry.shape === 'rounded-rectangle' ? 6 : 2}
+        cornerRadius={entry.shape === 'rounded-rectangle' ? (compact ? 4 : 6) : 2}
       />
       {icon ? (
         <Group
-          x={11}
-          y={4}
-          scaleX={14 / Number(icon.viewBox.split(' ')[2])}
-          scaleY={14 / Number(icon.viewBox.split(' ')[3])}
+          x={iconOffsetX}
+          y={iconOffsetY}
+          scaleX={iconBox / Number(icon.viewBox.split(' ')[2])}
+          scaleY={iconBox / Number(icon.viewBox.split(' ')[3])}
         >
           <Path
             data={icon.path}
@@ -167,6 +184,8 @@ export const LayoutStage = ({
   onUpdateArrowEndpoint,
   onFinishDraftTool,
   onEditTitle,
+  onOpenContextMenu,
+  theme,
 }: LayoutStageProps) => {
   const legendEntries = useMemo(() => buildLegendEntries(project, scene), [project, scene]);
   const frame = useMemo(
@@ -182,13 +201,17 @@ export const LayoutStage = ({
     () => (scene.kind === 'interior' ? getParentEntityForScene(project, scene.id)?.entity ?? null : null),
     [project, scene],
   );
+  const sceneColors = useMemo(
+    () => getSceneThemeColors(scene.kind, scene.appearance, theme),
+    [scene.appearance, scene.kind, theme],
+  );
   const toolCapturesScenePointer = tool === 'cable' || tool === 'arrow' || tool === 'circle' || tool === 'text';
   const layoutTitle = scene.kind === 'site' ? documentTitle : parentEntity?.label ?? documentTitle;
-  const titleFontSize = scene.kind === 'site' ? 42 : 18;
-  const legendRowHeight = scene.kind === 'site' ? 28 : 20;
+  const titleFontSize = scene.kind === 'site' ? 42 : 12;
+  const legendRowHeight = scene.kind === 'site' ? 28 : 16;
   const legendCardHeight = Math.max(
-    scene.kind === 'site' ? 220 : 118,
-    legendEntries.length * legendRowHeight + (scene.kind === 'site' ? 72 : 46),
+    scene.kind === 'site' ? 220 : 88,
+    legendEntries.length * legendRowHeight + (scene.kind === 'site' ? 72 : 34),
   );
 
   const pendingCanvasPressRef = useRef(false);
@@ -319,7 +342,7 @@ export const LayoutStage = ({
             y={0}
             width={frame.sheetSize.width}
             height={frame.sheetSize.height}
-            fill="#0b0b0c"
+            fill={sceneColors.frameColor}
             cornerRadius={18}
           />
 
@@ -332,7 +355,7 @@ export const LayoutStage = ({
               align="center"
               fontSize={titleFontSize}
               fontStyle="bold"
-              fill="#f4ede2"
+              fill={sceneColors.textColor}
               onClick={(event) => {
                 event.cancelBubble = true;
                 onEditTitle();
@@ -351,8 +374,8 @@ export const LayoutStage = ({
               y={0}
               width={scene.size.width}
               height={scene.size.height}
-              fill={scene.kind === 'site' ? '#152017' : '#242424'}
-              stroke="#ff8a1d"
+              fill={sceneColors.backgroundColor}
+              stroke={sceneColors.accentColor}
               strokeWidth={3}
               cornerRadius={scene.kind === 'site' ? 0 : 10}
             />
@@ -362,7 +385,7 @@ export const LayoutStage = ({
                   <Line
                     key={`minor-${index}`}
                     points={points}
-                    stroke={scene.kind === 'site' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.06)'}
+                    stroke={sceneColors.minorGridColor}
                     strokeWidth={1}
                     listening={false}
                   />
@@ -374,7 +397,7 @@ export const LayoutStage = ({
                   <Line
                     key={`major-${index}`}
                     points={points}
-                    stroke="rgba(255, 138, 29, 0.22)"
+                    stroke={sceneColors.majorGridColor}
                     strokeWidth={1.5}
                     listening={false}
                   />
@@ -393,6 +416,7 @@ export const LayoutStage = ({
                 onEnterInterior={onEnterInterior}
                 onUpdateCablePoint={onUpdateCablePoint}
                 onUpdateArrowEndpoint={onUpdateArrowEndpoint}
+                onOpenContextMenu={onOpenContextMenu}
               />
 
               {draftCable ? (
@@ -492,8 +516,8 @@ export const LayoutStage = ({
                 name="canvas-surface"
                 width={frame.legendWidth}
                 height={legendCardHeight}
-                fill="rgba(14, 14, 15, 0.96)"
-                stroke="rgba(255, 138, 29, 0.65)"
+                fill={sceneColors.legendFill}
+                stroke={sceneColors.legendBorder}
                 strokeWidth={2}
                 cornerRadius={16}
               />
@@ -502,9 +526,9 @@ export const LayoutStage = ({
                 y={scene.kind === 'site' ? 14 : 10}
                 width={frame.legendWidth - 32}
                 text={scene.kind === 'site' ? 'Camp Key' : 'Interior Key'}
-                fontSize={scene.kind === 'site' ? 22 : 14}
+                fontSize={scene.kind === 'site' ? 22 : 11}
                 fontStyle="bold"
-                fill="#f4ede2"
+                fill={sceneColors.textColor}
                 listening={false}
               />
 
@@ -516,17 +540,17 @@ export const LayoutStage = ({
                     y={scene.kind === 'site' ? 48 + index * legendRowHeight : 34 + index * legendRowHeight}
                     listening={false}
                   >
-                    <LegendSwatch entry={entry} />
+                    <LegendSwatch entry={entry} compact={scene.kind === 'interior'} />
                     <Text
-                      x={46}
-                      y={scene.kind === 'site' ? -1 : -1}
-                      width={frame.legendWidth - 66}
+                      x={scene.kind === 'site' ? 46 : 38}
+                      y={scene.kind === 'site' ? -1 : -2}
+                      width={frame.legendWidth - (scene.kind === 'site' ? 66 : 54)}
                       text={entry.quantity > 1 ? `${entry.label} x${entry.quantity}` : entry.label}
-                      fontSize={scene.kind === 'site' ? 14 : 12}
+                      fontSize={scene.kind === 'site' ? 14 : 10}
                       fontStyle="bold"
                       wrap="none"
                       ellipsis
-                      fill="#f4ede2"
+                      fill={sceneColors.textColor}
                     />
                   </Group>
                 ))
@@ -536,8 +560,8 @@ export const LayoutStage = ({
                   y={scene.kind === 'site' ? 56 : 42}
                   width={frame.legendWidth - 32}
                   text="No placed items yet."
-                  fontSize={scene.kind === 'site' ? 14 : 12}
-                  fill="#f4ede2"
+                  fontSize={scene.kind === 'site' ? 14 : 10}
+                  fill={sceneColors.textColor}
                   listening={false}
                 />
               )}

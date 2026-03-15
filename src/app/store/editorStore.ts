@@ -84,6 +84,7 @@ interface EditorStoreState {
   setSelectedCatalogId: (definitionId: string | null) => void;
   setPlacementSize: (size: Size | null) => void;
   setSceneSize: (sceneId: string, size: Size) => void;
+  setSceneAppearance: (sceneId: string, appearance: Partial<LayoutProject['scenes'][number]['appearance']>) => void;
   setViewport: (sceneId: string, viewport: ViewportState) => void;
   applySceneCommand: (command: Parameters<typeof applyHistoryCommand>[1]) => void;
   updateSelectedItem: (changes: Partial<SceneItem>) => void;
@@ -164,7 +165,7 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
   createProject: (projectType, name, size) => {
     const project =
       projectType === 'site'
-        ? createSiteProject(name)
+        ? createSiteProject(name, size)
         : createInteriorProject(name, size);
     get().loadProject(project, `${project.name}.layoutplanner.json`, null);
   },
@@ -215,6 +216,21 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
           type: 'update-scene-size',
           sceneId,
           size,
+        }),
+        dirty: true,
+      };
+    }),
+  setSceneAppearance: (sceneId, appearance) =>
+    set((state) => {
+      if (!state.history) {
+        return state;
+      }
+
+      return {
+        history: applyHistoryCommand(state.history, {
+          type: 'update-scene-appearance',
+          sceneId,
+          appearance,
         }),
         dirty: true,
       };
@@ -329,7 +345,7 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
           sceneId: state.activeSceneId!,
           item: createArrowAnnotation(state.activeSceneId!, state.draftArrow.start, point),
         });
-        set({ draftArrow: null, selectedItemId: null });
+        set({ draftArrow: null, selectedItemId: null, tool: 'select' });
         return;
       case 'circle':
         if (!state.draftCircle) {
@@ -351,7 +367,7 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
             ),
           ),
         });
-        set({ draftCircle: null, selectedItemId: null });
+        set({ draftCircle: null, selectedItemId: null, tool: 'select' });
         return;
       case 'select':
       case 'pan':
@@ -395,7 +411,7 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
         sceneId: state.activeSceneId,
         item,
       });
-      set({ draftCable: null, selectedItemId: item.id });
+      set({ draftCable: null, selectedItemId: item.id, tool: 'select' });
       return;
     }
 

@@ -50,9 +50,7 @@ export const InspectorPanel = ({
     return (
       <section className="panel-card">
         <div className="panel-title-row">
-          <div className="panel-header">
-            <h3>No selection</h3>
-          </div>
+          <div />
           <button
             type="button"
             className="panel-collapse"
@@ -87,9 +85,7 @@ export const InspectorPanel = ({
   return (
     <section className="panel-card">
       <div className="panel-title-row">
-        <div className="panel-header">
-          <h3>{item.kind}</h3>
-        </div>
+        <div />
         <button
           type="button"
           className="panel-collapse"

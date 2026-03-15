@@ -33,6 +33,7 @@ interface SceneRendererProps {
   tool: ToolMode;
   selectedItemId: string | null;
   onSelectItem: (itemId: string | null) => void;
+  onOpenContextMenu?: (itemId: string, point: Point) => void;
   onEditTextItem: (itemId: string) => void;
   onUpdateItem: (itemId: string, changes: Partial<SceneItem>) => void;
   onEnterInterior: (itemId: string) => void;
@@ -61,18 +62,33 @@ const useLoadedImage = (src?: string) => {
 
 const flattenPoints = (points: Point[]): number[] => points.flatMap((point) => [point.x, point.y]);
 
-const sortSceneItems = (items: SceneItem[]): SceneItem[] => {
-  const order: Record<SceneItem['kind'], number> = {
-    'background-image': 0,
-    'placed-entity': 1,
-    'cable-run': 2,
-    'arrow-annotation': 3,
-    'circle-annotation': 4,
-    'text-annotation': 5,
-  };
+const getSortOrder = (item: SceneItem, project: LayoutProject): number => {
+  if (item.kind === 'background-image') {
+    return 0;
+  }
 
-  return [...items].sort((left, right) => order[left.kind] - order[right.kind]);
+  if (item.kind === 'placed-entity') {
+    const definition = getDefinition(item.definitionId, project);
+    return definition?.id === 'interior-table' || definition?.name.toLowerCase() === 'table' ? 1 : 2;
+  }
+
+  if (item.kind === 'cable-run') {
+    return 3;
+  }
+
+  if (item.kind === 'arrow-annotation') {
+    return 4;
+  }
+
+  if (item.kind === 'circle-annotation') {
+    return 5;
+  }
+
+  return 6;
 };
+
+const sortSceneItems = (items: SceneItem[], project: LayoutProject): SceneItem[] =>
+  [...items].sort((left, right) => getSortOrder(left, project) - getSortOrder(right, project));
 
 const getTentOutlinePoints = (width: number, height: number): number[] => {
   const inset = Math.min(width * 0.08, 20);
@@ -218,8 +234,8 @@ const BackgroundNode = ({
         y={-item.size.height / 2}
         width={item.size.width}
         height={item.size.height}
-        fill={item.style.fill}
-        opacity={selected ? 0.16 : 0.08}
+        fill={selected ? 'rgba(37, 99, 235, 0.08)' : 'rgba(0, 0, 0, 0)'}
+        opacity={1}
         stroke={selected ? '#355070' : 'transparent'}
         strokeWidth={selected ? 1.5 : 0}
         dash={selected ? [8, 6] : undefined}
@@ -247,7 +263,7 @@ const OverlayScene = ({
   scene: LayoutScene;
 }) => (
   <>
-    {sortSceneItems(scene.items).map((item) => {
+    {sortSceneItems(scene.items, project).map((item) => {
       if (item.kind === 'background-image') {
         return project.visibility.showReferenceBackgrounds ? (
           <BackgroundNode
@@ -345,6 +361,7 @@ export const SceneRenderer = ({
   tool,
   selectedItemId,
   onSelectItem,
+  onOpenContextMenu,
   onEditTextItem,
   onUpdateItem,
   onEnterInterior,
@@ -376,7 +393,7 @@ export const SceneRenderer = ({
     transformerRef.current.getLayer()?.batchDraw();
   }, [selectedTransformItem]);
 
-  const sortedItems = useMemo(() => sortSceneItems(scene.items), [scene.items]);
+  const sortedItems = useMemo(() => sortSceneItems(scene.items, project), [project, scene.items]);
 
   return (
     <>
@@ -428,6 +445,12 @@ export const SceneRenderer = ({
               onTap={(event) => {
                 event.cancelBubble = true;
                 onSelectItem(item.id);
+              }}
+              onContextMenu={(event) => {
+                event.evt.preventDefault();
+                event.cancelBubble = true;
+                onSelectItem(item.id);
+                onOpenContextMenu?.(item.id, { x: event.evt.clientX, y: event.evt.clientY });
               }}
               onDblClick={(event) => {
                 event.cancelBubble = true;
@@ -532,6 +555,12 @@ export const SceneRenderer = ({
                   event.cancelBubble = true;
                   onSelectItem(item.id);
                 }}
+                onContextMenu={(event) => {
+                  event.evt.preventDefault();
+                  event.cancelBubble = true;
+                  onSelectItem(item.id);
+                  onOpenContextMenu?.(item.id, { x: event.evt.clientX, y: event.evt.clientY });
+                }}
                 onDragEnd={(event) => {
                   const delta = {
                     x: event.target.x(),
@@ -596,6 +625,12 @@ export const SceneRenderer = ({
                 onClick={(event) => {
                   event.cancelBubble = true;
                   onSelectItem(item.id);
+                }}
+                onContextMenu={(event) => {
+                  event.evt.preventDefault();
+                  event.cancelBubble = true;
+                  onSelectItem(item.id);
+                  onOpenContextMenu?.(item.id, { x: event.evt.clientX, y: event.evt.clientY });
                 }}
                 onDragEnd={(event) => {
                   const delta = {
@@ -675,6 +710,12 @@ export const SceneRenderer = ({
                 event.cancelBubble = true;
                 onSelectItem(item.id);
               }}
+              onContextMenu={(event) => {
+                event.evt.preventDefault();
+                event.cancelBubble = true;
+                onSelectItem(item.id);
+                onOpenContextMenu?.(item.id, { x: event.evt.clientX, y: event.evt.clientY });
+              }}
               onDragEnd={(event) =>
                 onUpdateItem(item.id, {
                   center: {
@@ -706,6 +747,12 @@ export const SceneRenderer = ({
               event.cancelBubble = true;
               onSelectItem(item.id);
               onEditTextItem(item.id);
+            }}
+            onContextMenu={(event) => {
+              event.evt.preventDefault();
+              event.cancelBubble = true;
+              onSelectItem(item.id);
+              onOpenContextMenu?.(item.id, { x: event.evt.clientX, y: event.evt.clientY });
             }}
             onTap={(event) => {
               event.cancelBubble = true;
