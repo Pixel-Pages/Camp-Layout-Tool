@@ -7,7 +7,7 @@ export interface LegendEntry {
   quantity: number;
   fill: string;
   stroke: string;
-  shape: 'rectangle' | 'rounded-rectangle' | 'ellipse' | 'tent-rect' | 'tent-dome';
+  shape: 'rectangle' | 'rounded-rectangle' | 'ellipse' | 'tent-rect' | 'tent-dome' | 'tent-hex';
   iconKey?: string;
 }
 
@@ -23,6 +23,10 @@ const getLegendShape = (entity: PlacedEntity, project: LayoutProject): LegendEnt
 
   if (definition.shape === 'tent-dome') {
     return 'tent-dome';
+  }
+
+  if (definition.shape === 'tent-hex') {
+    return 'tent-hex';
   }
 
   if (definition.shape === 'tent-rect') {

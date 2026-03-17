@@ -27,6 +27,9 @@ const buildPackingListRows = (project: LayoutProject, entities: PlacedEntity[]):
 
   for (const entity of entities) {
     const definition = getDefinition(entity.definitionId, project);
+    if (definition?.includeInPackingList === false) {
+      continue;
+    }
     const definitionKey = definition?.id ?? entity.definitionId;
     const definitionName = definition?.name ?? entity.label ?? entity.definitionId;
     const category = definition?.category ?? 'custom';

@@ -21,11 +21,18 @@ import type {
   BackgroundImageItem,
   LayoutProject,
   LayoutScene,
+  LineStyle,
   PlacedEntity,
   Point,
   SceneItem,
   ToolMode,
 } from '../../domain/types';
+import {
+  getSceneBoundaryShape,
+  getSceneHexPointsFlat,
+  getTentHexPoints,
+  getTentOutlinePoints,
+} from '../shapeGeometry';
 
 interface SceneRendererProps {
   project: LayoutProject;
@@ -62,6 +69,12 @@ const useLoadedImage = (src?: string) => {
 
 const flattenPoints = (points: Point[]): number[] => points.flatMap((point) => [point.x, point.y]);
 
+interface PolylineMarker {
+  x: number;
+  y: number;
+  angle: number;
+}
+
 const getSortOrder = (item: SceneItem, project: LayoutProject): number => {
   if (item.kind === 'background-image') {
     return 0;
@@ -90,22 +103,143 @@ const getSortOrder = (item: SceneItem, project: LayoutProject): number => {
 const sortSceneItems = (items: SceneItem[], project: LayoutProject): SceneItem[] =>
   [...items].sort((left, right) => getSortOrder(left, project) - getSortOrder(right, project));
 
-const getTentOutlinePoints = (width: number, height: number): number[] => {
-  const inset = Math.min(width * 0.08, 20);
-  return [
-    -width / 2 + inset,
-    -height / 2,
-    width / 2 - inset,
-    -height / 2,
-    width / 2,
-    0,
-    width / 2 - inset,
-    height / 2,
-    -width / 2 + inset,
-    height / 2,
-    -width / 2,
-    0,
-  ];
+const buildPolylineMarkers = (points: Point[], spacing: number): PolylineMarker[] => {
+  const markers: PolylineMarker[] = [];
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const start = points[index];
+    const end = points[index + 1];
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const segmentLength = Math.hypot(deltaX, deltaY);
+
+    if (segmentLength < 1) {
+      continue;
+    }
+
+    const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+    for (let distance = spacing / 2; distance < segmentLength; distance += spacing) {
+      const ratio = distance / segmentLength;
+      markers.push({
+        x: start.x + deltaX * ratio,
+        y: start.y + deltaY * ratio,
+        angle,
+      });
+    }
+  }
+
+  return markers;
+};
+
+const getCableDash = (lineStyle: LineStyle | undefined, lineWidth: number): number[] | undefined => {
+  if (lineStyle === 'dashes') {
+    return [Math.max(10, lineWidth * 2.25), Math.max(7, lineWidth * 1.3)];
+  }
+
+  if (lineStyle === 'dots') {
+    return [0.1, Math.max(8, lineWidth * 1.5)];
+  }
+
+  return undefined;
+};
+
+const getSceneCableInteriorColor = (scene: LayoutScene): string =>
+  scene.appearance.backgroundColor ?? (scene.kind === 'site' ? '#152017' : '#efe3c9');
+
+const CableVisual = ({
+  item,
+  scene,
+}: {
+  item: Extract<SceneItem, { kind: 'cable-run' }>;
+  scene: LayoutScene;
+}) => {
+  const flatPoints = flattenPoints(item.points);
+  const lineStyle = item.style.lineStyle ?? 'solid';
+  const lineWidth = Math.max(2, item.style.lineWidth);
+  const lineColor = item.style.lineColor;
+  const markers = buildPolylineMarkers(
+    item.points,
+    Math.max(16, lineStyle === 'c-wire' ? lineWidth * 2.2 : lineWidth * 2.7),
+  );
+
+  if (lineStyle === 'c-wire') {
+    return (
+      <>
+        <Line
+          points={flatPoints}
+          stroke={lineColor}
+          strokeWidth={Math.max(1.5, lineWidth * 0.22)}
+          opacity={0.55}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
+        {markers.map((marker, index) => (
+          <Ellipse
+            key={`${item.id}-coil-${index}`}
+            x={marker.x}
+            y={marker.y}
+            radiusX={Math.max(6, lineWidth * 1.05)}
+            radiusY={Math.max(4, lineWidth * 0.55)}
+            rotation={marker.angle}
+            stroke={lineColor}
+            strokeWidth={Math.max(1.4, lineWidth * 0.26)}
+            listening={false}
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (lineStyle === 'vent') {
+    const ventCore = getSceneCableInteriorColor(scene);
+
+    return (
+      <>
+        <Line
+          points={flatPoints}
+          stroke={lineColor}
+          strokeWidth={lineWidth * 1.6}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
+        <Line
+          points={flatPoints}
+          stroke={ventCore}
+          strokeWidth={Math.max(2, lineWidth * 0.85)}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
+        {markers.map((marker, index) => (
+          <Line
+            key={`${item.id}-vent-${index}`}
+            x={marker.x}
+            y={marker.y}
+            rotation={marker.angle}
+            points={[-lineWidth * 0.45, -lineWidth * 0.45, lineWidth * 0.45, lineWidth * 0.45]}
+            stroke={lineColor}
+            strokeWidth={Math.max(1.2, lineWidth * 0.16)}
+            lineCap="round"
+            listening={false}
+          />
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <Line
+      points={flatPoints}
+      stroke={lineColor}
+      strokeWidth={lineWidth}
+      lineCap="round"
+      lineJoin="round"
+      dash={getCableDash(lineStyle, lineWidth)}
+      listening={false}
+    />
+  );
 };
 
 const renderEntityShell = (entity: PlacedEntity, definitionId: string, project: LayoutProject) => {
@@ -130,6 +264,19 @@ const renderEntityShell = (entity: PlacedEntity, definitionId: string, project: 
     return (
       <Line
         points={getTentOutlinePoints(entity.size.width, entity.size.height)}
+        closed
+        fill={entity.style.fill}
+        stroke={entity.style.stroke}
+        strokeWidth={entity.style.strokeWidth}
+        lineJoin="round"
+      />
+    );
+  }
+
+  if (definition.shape === 'tent-hex') {
+    return (
+      <Line
+        points={getTentHexPoints(entity.size.width, entity.size.height)}
         closed
         fill={entity.style.fill}
         stroke={entity.style.stroke}
@@ -293,18 +440,7 @@ const OverlayScene = ({
       }
 
       if (item.kind === 'cable-run') {
-        return (
-          <Line
-            key={item.id}
-            points={flattenPoints(item.points)}
-            stroke={item.style.lineColor}
-            strokeWidth={item.style.lineWidth}
-            lineCap="round"
-            lineJoin="round"
-            opacity={0.8}
-            listening={false}
-          />
-        );
+        return <CableVisual key={item.id} item={item} scene={scene} />;
       }
 
       if (item.kind === 'arrow-annotation') {
@@ -423,6 +559,32 @@ export const SceneRenderer = ({
           const icon = definition.iconKey ? ICONS[definition.iconKey] : null;
           const isSelected = interactive && item.id === selectedItemId;
           const interiorScene = item.interiorSceneId ? findScene(project, item.interiorSceneId) : undefined;
+          const interiorBoundaryShape = getSceneBoundaryShape(definition.shape);
+          const overlayClipFunc =
+            interiorBoundaryShape === 'rect'
+              ? undefined
+              : (context: Konva.Context) => {
+                  context.beginPath();
+                  if (interiorBoundaryShape === 'ellipse') {
+                    context.ellipse(
+                      item.size.width / 2,
+                      item.size.height / 2,
+                      item.size.width / 2,
+                      item.size.height / 2,
+                      0,
+                      0,
+                      Math.PI * 2,
+                    );
+                    context.closePath();
+                  } else {
+                    const points = getSceneHexPointsFlat(item.size);
+                    context.moveTo(points[0], points[1]);
+                    for (let index = 2; index < points.length; index += 2) {
+                      context.lineTo(points[index], points[index + 1]);
+                    }
+                    context.closePath();
+                  }
+                };
 
           return (
             <Group
@@ -508,10 +670,11 @@ export const SceneRenderer = ({
                 <Group
                   x={-item.size.width / 2}
                   y={-item.size.height / 2}
-                  clipX={0}
-                  clipY={0}
-                  clipWidth={item.size.width}
-                  clipHeight={item.size.height}
+                  clipX={interiorBoundaryShape === 'rect' ? 0 : undefined}
+                  clipY={interiorBoundaryShape === 'rect' ? 0 : undefined}
+                  clipWidth={interiorBoundaryShape === 'rect' ? item.size.width : undefined}
+                  clipHeight={interiorBoundaryShape === 'rect' ? item.size.height : undefined}
+                  clipFunc={overlayClipFunc}
                   listening={false}
                 >
                   <Rect width={item.size.width} height={item.size.height} fill="#f5f0e6" opacity={0.05} />
@@ -540,8 +703,8 @@ export const SceneRenderer = ({
                 x={0}
                 y={0}
                 points={flattenPoints(item.points)}
-                stroke={item.style.lineColor}
-                strokeWidth={item.style.lineWidth}
+                stroke="rgba(0, 0, 0, 0.001)"
+                strokeWidth={Math.max(16, item.style.lineWidth * 2)}
                 lineCap="round"
                 lineJoin="round"
                 draggable={interactive && tool === 'select'}
@@ -552,6 +715,10 @@ export const SceneRenderer = ({
                   event.cancelBubble = true;
                 }}
                 onClick={(event) => {
+                  event.cancelBubble = true;
+                  onSelectItem(item.id);
+                }}
+                onTap={(event) => {
                   event.cancelBubble = true;
                   onSelectItem(item.id);
                 }}
@@ -575,6 +742,7 @@ export const SceneRenderer = ({
                   event.target.position({ x: 0, y: 0 });
                 }}
               />
+              <CableVisual item={item} scene={scene} />
               {isSelected
                 ? item.points.map((point, index) => (
                     <Circle

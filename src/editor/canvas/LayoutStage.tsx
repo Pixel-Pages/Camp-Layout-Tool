@@ -2,6 +2,7 @@ import type Konva from 'konva';
 import { useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import { Arrow, Circle, Ellipse, Group, Layer, Line, Path, Rect, Stage, Text } from 'react-konva';
+import { getDefinition } from '../../catalog';
 import { ICONS } from '../../catalog/icons';
 import { getParentEntityForScene } from '../../domain/project';
 import type {
@@ -14,6 +15,13 @@ import type {
 } from '../../domain/types';
 import { buildLegendEntries } from '../legend';
 import { getLayoutFrameMetrics } from '../layoutFrame';
+import {
+  getSceneBoundaryShape,
+  getSceneHexPointsFlat,
+  getTentHexPoints,
+  getTentOutlinePoints,
+  isPointWithinSceneBoundary,
+} from '../shapeGeometry';
 import { getSceneThemeColors } from '../sceneTheme';
 import { BASE_PIXELS_PER_INCH, screenToScene, zoomViewportAtPoint } from '../viewport';
 import { SceneRenderer } from '../renderers/SceneRenderer';
@@ -66,24 +74,6 @@ const buildGridLines = (scene: LayoutScene, gridSize: number) => {
   return { verticalMinor, verticalMajor, horizontalMinor, horizontalMajor };
 };
 
-const getTentOutlinePoints = (width: number, height: number): number[] => {
-  const inset = Math.min(width * 0.08, 20);
-  return [
-    -width / 2 + inset,
-    -height / 2,
-    width / 2 - inset,
-    -height / 2,
-    width / 2,
-    0,
-    width / 2 - inset,
-    height / 2,
-    -width / 2 + inset,
-    height / 2,
-    -width / 2,
-    0,
-  ];
-};
-
 const LegendSwatch = ({
   entry,
   compact,
@@ -119,6 +109,20 @@ const LegendSwatch = ({
         x={swatchX}
         y={swatchY}
         points={getTentOutlinePoints(compact ? 22 : 28, compact ? 12 : 16)}
+        closed
+        fill={entry.fill}
+        stroke={entry.stroke}
+        strokeWidth={1.5}
+      />
+    );
+  }
+
+  if (entry.shape === 'tent-hex') {
+    return (
+      <Line
+        x={swatchX}
+        y={swatchY}
+        points={getTentHexPoints(compact ? 22 : 28, compact ? 12 : 16)}
         closed
         fill={entry.fill}
         stroke={entry.stroke}
@@ -201,9 +205,45 @@ export const LayoutStage = ({
     () => (scene.kind === 'interior' ? getParentEntityForScene(project, scene.id)?.entity ?? null : null),
     [project, scene],
   );
+  const parentDefinition = useMemo(
+    () => (parentEntity ? getDefinition(parentEntity.definitionId, project) : null),
+    [parentEntity, project],
+  );
   const sceneColors = useMemo(
     () => getSceneThemeColors(scene.kind, scene.appearance, theme),
     [scene.appearance, scene.kind, theme],
+  );
+  const boundaryShape = useMemo(
+    () => (scene.kind === 'interior' ? getSceneBoundaryShape(parentDefinition?.shape) : 'rect'),
+    [parentDefinition?.shape, scene.kind],
+  );
+  const sceneClipFunc = useMemo(
+    () =>
+      boundaryShape === 'rect'
+        ? undefined
+        : (context: Konva.Context) => {
+            context.beginPath();
+            if (boundaryShape === 'ellipse') {
+              context.ellipse(
+                scene.size.width / 2,
+                scene.size.height / 2,
+                scene.size.width / 2,
+                scene.size.height / 2,
+                0,
+                0,
+                Math.PI * 2,
+              );
+              context.closePath();
+            } else {
+              const points = getSceneHexPointsFlat(scene.size);
+              context.moveTo(points[0], points[1]);
+              for (let index = 2; index < points.length; index += 2) {
+                context.lineTo(points[index], points[index + 1]);
+              }
+              context.closePath();
+            }
+          },
+    [boundaryShape, scene.size],
   );
   const toolCapturesScenePointer = tool === 'cable' || tool === 'arrow' || tool === 'circle' || tool === 'text';
   const layoutTitle = scene.kind === 'site' ? documentTitle : parentEntity?.label ?? documentTitle;
@@ -235,10 +275,7 @@ export const LayoutStage = ({
   };
 
   const isInsideScene = (point: Point): boolean =>
-    point.x >= 0 &&
-    point.y >= 0 &&
-    point.x <= scene.size.width &&
-    point.y <= scene.size.height;
+    isPointWithinSceneBoundary(point, scene.size, boundaryShape);
 
   return (
     <Stage
@@ -368,43 +405,72 @@ export const LayoutStage = ({
           ) : null}
 
           <Group x={frame.sceneOrigin.x} y={frame.sceneOrigin.y}>
-            <Rect
-              name="canvas-surface"
-              x={0}
-              y={0}
-              width={scene.size.width}
-              height={scene.size.height}
-              fill={sceneColors.backgroundColor}
-              stroke={sceneColors.accentColor}
-              strokeWidth={3}
-              cornerRadius={scene.kind === 'site' ? 0 : 10}
-            />
+            {boundaryShape === 'ellipse' ? (
+              <Ellipse
+                name="canvas-surface"
+                x={scene.size.width / 2}
+                y={scene.size.height / 2}
+                radiusX={scene.size.width / 2}
+                radiusY={scene.size.height / 2}
+                fill={sceneColors.backgroundColor}
+                stroke={sceneColors.accentColor}
+                strokeWidth={3}
+              />
+            ) : boundaryShape === 'hex' ? (
+              <Line
+                name="canvas-surface"
+                points={getSceneHexPointsFlat(scene.size)}
+                closed
+                fill={sceneColors.backgroundColor}
+                stroke={sceneColors.accentColor}
+                strokeWidth={3}
+                lineJoin="round"
+              />
+            ) : (
+              <Rect
+                name="canvas-surface"
+                x={0}
+                y={0}
+                width={scene.size.width}
+                height={scene.size.height}
+                fill={sceneColors.backgroundColor}
+                stroke={sceneColors.accentColor}
+                strokeWidth={3}
+                cornerRadius={scene.kind === 'site' ? 0 : 10}
+              />
+            )}
 
-            {project.visibility.showGrid
-              ? [...grid.verticalMinor, ...grid.horizontalMinor].map((points, index) => (
-                  <Line
-                    key={`minor-${index}`}
-                    points={points}
-                    stroke={sceneColors.minorGridColor}
-                    strokeWidth={1}
-                    listening={false}
-                  />
-                ))
-              : null}
+            <Group
+              clipX={boundaryShape === 'rect' ? 0 : undefined}
+              clipY={boundaryShape === 'rect' ? 0 : undefined}
+              clipWidth={boundaryShape === 'rect' ? scene.size.width : undefined}
+              clipHeight={boundaryShape === 'rect' ? scene.size.height : undefined}
+              clipFunc={sceneClipFunc}
+            >
+              {project.visibility.showGrid
+                ? [...grid.verticalMinor, ...grid.horizontalMinor].map((points, index) => (
+                    <Line
+                      key={`minor-${index}`}
+                      points={points}
+                      stroke={sceneColors.minorGridColor}
+                      strokeWidth={1}
+                      listening={false}
+                    />
+                  ))
+                : null}
 
-            {project.visibility.showGrid
-              ? [...grid.verticalMajor, ...grid.horizontalMajor].map((points, index) => (
-                  <Line
-                    key={`major-${index}`}
-                    points={points}
-                    stroke={sceneColors.majorGridColor}
-                    strokeWidth={1.5}
-                    listening={false}
-                  />
-                ))
-              : null}
+              {project.visibility.showGrid
+                ? [...grid.verticalMajor, ...grid.horizontalMajor].map((points, index) => (
+                    <Line
+                      key={`major-${index}`}
+                      points={points}
+                      stroke={sceneColors.majorGridColor}
+                      strokeWidth={1.5}
+                      listening={false}
+                    />
+                  ))
+                : null}
 
-            <Group clipX={0} clipY={0} clipWidth={scene.size.width} clipHeight={scene.size.height}>
               <SceneRenderer
                 project={project}
                 scene={scene}
@@ -483,21 +549,21 @@ export const LayoutStage = ({
                   }}
                   onMouseMove={(event) => {
                     const localPoint = event.target.getRelativePointerPosition();
-                    if (localPoint) {
+                    if (localPoint && isInsideScene(localPoint)) {
                       onCanvasMove(localPoint);
                     }
                   }}
                   onClick={(event) => {
                     event.cancelBubble = true;
                     const localPoint = event.target.getRelativePointerPosition();
-                    if (localPoint) {
+                    if (localPoint && isInsideScene(localPoint)) {
                       onCanvasClick(localPoint);
                     }
                   }}
                   onTap={(event) => {
                     event.cancelBubble = true;
                     const localPoint = event.target.getRelativePointerPosition();
-                    if (localPoint) {
+                    if (localPoint && isInsideScene(localPoint)) {
                       onCanvasClick(localPoint);
                     }
                   }}

@@ -1,6 +1,7 @@
 export type ProjectKind = 'site' | 'interior';
 export type SceneKind = 'site' | 'interior';
 export type ToolMode = 'select' | 'pan' | 'place' | 'cable' | 'text' | 'arrow' | 'circle';
+export type LineStyle = 'solid' | 'dashes' | 'dots' | 'c-wire' | 'vent';
 export type ItemKind =
   | 'placed-entity'
   | 'cable-run'
@@ -14,7 +15,8 @@ export type ShapeKind =
   | 'ellipse'
   | 'icon'
   | 'tent-rect'
-  | 'tent-dome';
+  | 'tent-dome'
+  | 'tent-hex';
 export type DefinitionScope = 'site' | 'interior' | 'both';
 
 export interface Point {
@@ -35,6 +37,7 @@ export interface StyleProps {
   labelColor: string;
   lineColor: string;
   lineWidth: number;
+  lineStyle?: LineStyle;
   opacity?: number;
 }
 
@@ -69,6 +72,7 @@ export interface CatalogDefinition {
   rotatable: boolean;
   resizable: boolean;
   supportsInterior: boolean;
+  includeInPackingList?: boolean;
   defaultWeightLbs?: number;
   defaultStyle: StyleProps;
   iconKey?: string;

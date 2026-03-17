@@ -31,6 +31,7 @@ import { DEFAULT_SITE_SIZE } from '../domain/project';
 import { BASE_PIXELS_PER_INCH, clampZoom, screenToScene } from '../editor/viewport';
 import { getLayoutFrameMetrics } from '../editor/layoutFrame';
 import { buildLegendEntries } from '../editor/legend';
+import { getSceneBoundaryShape, isPointWithinSceneBoundary } from '../editor/shapeGeometry';
 import { getSceneThemeColors } from '../editor/sceneTheme';
 import type { ViewportState } from '../domain/types';
 
@@ -137,6 +138,15 @@ export const App = () => {
   const activeSceneColors = useMemo(
     () => (activeScene ? getSceneThemeColors(activeScene.kind, activeScene.appearance, theme) : null),
     [activeScene, theme],
+  );
+  const activeSceneBoundaryShape = useMemo(
+    () =>
+      activeScene?.kind === 'interior'
+        ? getSceneBoundaryShape(
+            activeInteriorOwner ? getDefinition(activeInteriorOwner.definitionId, project)?.shape : undefined,
+          )
+        : 'rect',
+    [activeInteriorOwner, activeScene?.kind, project],
   );
 
   const sceneCategories = useMemo(() => {
@@ -764,10 +774,7 @@ export const App = () => {
               };
 
               if (
-                localPoint.x < 0 ||
-                localPoint.y < 0 ||
-                localPoint.x > activeScene.size.width ||
-                localPoint.y > activeScene.size.height
+                !isPointWithinSceneBoundary(localPoint, activeScene.size, activeSceneBoundaryShape)
               ) {
                 setNotice('Drop the item inside the layout grid.');
                 return;

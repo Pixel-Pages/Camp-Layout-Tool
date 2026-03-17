@@ -165,6 +165,7 @@ interface CustomCatalogDefinitionInput {
   fill: string;
   stroke: string;
   supportsInterior: boolean;
+  includeInPackingList: boolean;
   iconKey?: string;
 }
 
@@ -176,6 +177,7 @@ export const createCustomCatalogDefinition = ({
   fill,
   stroke,
   supportsInterior,
+  includeInPackingList,
   iconKey,
 }: CustomCatalogDefinitionInput): CatalogDefinition => ({
   id: createId('definition'),
@@ -187,6 +189,7 @@ export const createCustomCatalogDefinition = ({
   rotatable: true,
   resizable: false,
   supportsInterior,
+  includeInPackingList,
   defaultStyle: {
     fill,
     stroke,
@@ -257,6 +260,7 @@ export const createCableRun = (sceneId: string, points: Point[]): CableRun => ({
     labelColor: DEFAULT_STROKE,
     lineColor: DEFAULT_CABLE_COLOR,
     lineWidth: 8,
+    lineStyle: 'solid',
   },
 });
 

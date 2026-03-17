@@ -14,6 +14,7 @@ export interface CustomItemFormValue {
   fill: string;
   stroke: string;
   supportsInterior: boolean;
+  includeInPackingList: boolean;
   iconKey?: CustomSymbol;
 }
 
@@ -58,6 +59,7 @@ export const CustomItemForm = ({ sceneKind, onSubmit, onCancel }: CustomItemForm
   const [fill, setFill] = useState(sceneKind === 'site' ? DEFAULT_SITE_FILL : DEFAULT_INTERIOR_FILL);
   const [stroke, setStroke] = useState(sceneKind === 'site' ? '#f5f0e6' : DEFAULT_STROKE);
   const [supportsInterior, setSupportsInterior] = useState(false);
+  const [includeInPackingList, setIncludeInPackingList] = useState(true);
 
   return (
     <div className="interior-project-form">
@@ -147,6 +149,15 @@ export const CustomItemForm = ({ sceneKind, onSubmit, onCancel }: CustomItemForm
         Supports interior editing
       </label>
 
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={includeInPackingList}
+          onChange={(event) => setIncludeInPackingList(event.target.checked)}
+        />
+        Item goes on packing list
+      </label>
+
       <div className="hero-actions">
         <button
           className="primary-button"
@@ -162,6 +173,7 @@ export const CustomItemForm = ({ sceneKind, onSubmit, onCancel }: CustomItemForm
               fill,
               stroke,
               supportsInterior,
+              includeInPackingList,
               iconKey: symbol || undefined,
             })
           }

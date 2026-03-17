@@ -29,7 +29,7 @@ describe('packing list reporting', () => {
     const sections = buildPackingListSections(withInterior);
 
     expect(rows.find((row) => row.definitionId === 'tent-307')?.quantity).toBe(1);
-    expect(rows.find((row) => row.definitionId === 'site-tree')?.quantity).toBe(1);
+    expect(rows.find((row) => row.definitionId === 'site-tree')).toBeUndefined();
     expect(rows.find((row) => row.definitionId === 'site-structure')?.quantity).toBe(1);
     expect(sections.exterior.find((row) => row.definitionId === 'site-structure')?.quantity).toBe(1);
     expect(sections.interior.find((row) => row.definitionId === 'interior-rack')?.quantity).toBe(1);

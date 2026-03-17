@@ -20,6 +20,7 @@ describe('layout project schema', () => {
       fill: '#365c3d',
       stroke: '#f5f0e6',
       supportsInterior: true,
+      includeInPackingList: true,
       iconKey: 'shape-diamond',
     });
     project.customDefinitions.push(customDefinition);

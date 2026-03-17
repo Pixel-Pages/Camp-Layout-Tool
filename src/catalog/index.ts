@@ -1,5 +1,5 @@
 import type { CatalogDefinition, LayoutProject } from '../domain/types';
-import { INTERIOR_DEFINITIONS } from './interiorCatalog';
+import { INTERIOR_DEFINITIONS, LEGACY_INTERIOR_DEFINITIONS } from './interiorCatalog';
 import { SITE_DEFINITIONS } from './siteCatalog';
 
 export const BUILTIN_CATALOG_DEFINITIONS: CatalogDefinition[] = [
@@ -7,8 +7,10 @@ export const BUILTIN_CATALOG_DEFINITIONS: CatalogDefinition[] = [
   ...INTERIOR_DEFINITIONS,
 ];
 
+const LEGACY_CATALOG_DEFINITIONS: CatalogDefinition[] = [...LEGACY_INTERIOR_DEFINITIONS];
+
 const builtInDefinitionMap = new Map(
-  BUILTIN_CATALOG_DEFINITIONS.map((definition) => [definition.id, definition]),
+  [...BUILTIN_CATALOG_DEFINITIONS, ...LEGACY_CATALOG_DEFINITIONS].map((definition) => [definition.id, definition]),
 );
 
 const getCustomDefinitions = (

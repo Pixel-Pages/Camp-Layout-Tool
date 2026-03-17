@@ -24,6 +24,15 @@ const styleSchema = z.object({
   labelColor: z.string(),
   lineColor: z.string(),
   lineWidth: z.number(),
+  lineStyle: z
+    .union([
+      z.literal('solid'),
+      z.literal('dashes'),
+      z.literal('dots'),
+      z.literal('c-wire'),
+      z.literal('vent'),
+    ])
+    .optional(),
   opacity: z.number().optional(),
 });
 
@@ -45,11 +54,13 @@ const catalogDefinitionSchema = z.object({
     z.literal('icon'),
     z.literal('tent-rect'),
     z.literal('tent-dome'),
+    z.literal('tent-hex'),
   ]),
   defaultSize: sizeSchema,
   rotatable: z.boolean(),
   resizable: z.boolean(),
   supportsInterior: z.boolean(),
+  includeInPackingList: z.boolean().default(true),
   defaultWeightLbs: z.number().optional(),
   defaultStyle: styleSchema,
   iconKey: z.string().optional(),

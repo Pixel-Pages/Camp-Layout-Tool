@@ -90,7 +90,17 @@ export const WelcomeScreen = ({
         </section>
       ) : null}
 
-      <p className="welcome-footer">created by Aaron Fullbright</p>
+      <div className="welcome-footer">
+        <a
+          className="welcome-issues-link"
+          href="https://github.com/Pixel-Pages/Camp-Layout-Tool/issues"
+          target="_blank"
+          rel="noreferrer"
+        >
+          issues / change request
+        </a>
+        <p>created by Aaron Fullbright</p>
+      </div>
     </div>
   );
 };

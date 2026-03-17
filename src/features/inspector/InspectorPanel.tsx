@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getDefinition } from '../../catalog';
-import type { LayoutProject, SceneItem } from '../../domain/types';
+import type { LayoutProject, LineStyle, SceneItem } from '../../domain/types';
 import { ColorSwatches } from '../ui/ColorSwatches';
 
 interface InspectorPanelProps {
@@ -45,6 +45,13 @@ export const InspectorPanel = ({
   onEnterInterior,
 }: InspectorPanelProps) => {
   const [collapsed, setCollapsed] = useState(false);
+  const cableLineStyles: Array<{ value: LineStyle; label: string }> = [
+    { value: 'solid', label: 'Solid' },
+    { value: 'dashes', label: 'Dashes' },
+    { value: 'dots', label: 'Dots' },
+    { value: 'c-wire', label: 'C-wire' },
+    { value: 'vent', label: 'Vent' },
+  ];
 
   if (!item) {
     return (
@@ -233,6 +240,26 @@ export const InspectorPanel = ({
 
           {item.kind === 'cable-run' ? (
             <>
+              <label>
+                Cable style
+                <select
+                  value={item.style.lineStyle ?? 'solid'}
+                  onChange={(event) =>
+                    onUpdateItem({
+                      style: {
+                        ...item.style,
+                        lineStyle: event.target.value as LineStyle,
+                      },
+                    })
+                  }
+                >
+                  {cableLineStyles.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label>
                 Line thickness
                 <input
